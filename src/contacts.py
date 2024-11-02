@@ -11,7 +11,9 @@ def search_contact(service, search_term):
     """
 
     try:
-        result = (service.people().searchContacts(query=search_term, readMask="names,emailAddresses").execute())
+        result = (service.people().
+                  searchContacts(query=search_term, readMask="names,emailAddresses")
+                  .execute())
 
         return result
     except HttpError as err:
