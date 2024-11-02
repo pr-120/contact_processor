@@ -5,7 +5,7 @@ from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from googleapiclient.http import BatchHttpRequest
 
-from authentication import authenticate_to_api
+from src.authentication import authenticate_to_api
 
 MAIL_SCOPES = ["https://www.googleapis.com/auth/gmail.readonly"]
 

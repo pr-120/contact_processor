@@ -1,6 +1,6 @@
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
-from authentication import authenticate_to_api
+from src.authentication import authenticate_to_api
 
 CONTACT_SCOPES = ["https://www.googleapis.com/auth/contacts.readonly"]
 

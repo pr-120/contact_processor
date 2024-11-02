@@ -1,7 +1,7 @@
 from googleapiclient.http import BatchHttpRequest
 
-from contacts import delete_contacts
-from email import get_invalid_mail_addresses
+from src.contacts import delete_contacts
+from src.email import get_invalid_mail_addresses
 
 
 def batch_delete(service, contact_names_to_be_deleted: list):
