@@ -3,9 +3,10 @@ from audioop import error
 
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
-from googleapiclient.http import BatchHttpRequest
 
 from src.authentication import authenticate_to_api
+from src.batch import create_batch_request
+from src.query_contacts import CONTACT_SCOPES
 
 MAIL_SCOPES = ["https://www.googleapis.com/auth/gmail.readonly"]
 
@@ -42,20 +43,12 @@ def get_messages_from_invalid_addresses(invalid_emails: list, creds):
     results = []
     service = build("gmail", "v1", credentials=creds)
 
-    def callback(request_id, response, exception):
-        if exception:
-            print(f"An error occurred for request {request_id}: {exception}")
-            results.append({"id": request_id, "error": exception})
-        else:
-            print(f"Message ID {request_id}: {response['snippet']}")
-            results.append({"id": request_id, "response": response})
-
     # batch emails in groups to ensure no 429 errors are thrown serverside
     nr_of_emails_per_batch = 10
-    for count in range(0, len(invalid_emails), 10):
+    for count in range(0, len(invalid_emails), nr_of_emails_per_batch):
 
         batch_of_emails = invalid_emails[count:count + nr_of_emails_per_batch]
-        batch = BatchHttpRequest(batch_uri="https://gmail.googleapis.com/batch", callback=callback)
+        batch = create_batch_request("gmail", results)
 
         for invalid_email in batch_of_emails:
             batch.add(service.users().messages().get(userId="me", id=invalid_email["id"]))
@@ -71,7 +64,7 @@ def get_invalid_mail_addresses():
     :return invalid_mails: List of invalid mail addresses in string format
     """
 
-    creds = authenticate_to_api(MAIL_SCOPES)
+    creds = authenticate_to_api(MAIL_SCOPES + CONTACT_SCOPES)
     addresses_to_be_deleted = []
 
     try:
@@ -83,11 +76,23 @@ def get_invalid_mail_addresses():
         specific_label = [label for label in results["labels"] if label.get("name") == "falsch addressiert"][0]
 
         # get all mails which are labeled with specific_label
-        invalid_addresses = service.users().messages().list(userId="me", labelIds=[specific_label.get("id")]).execute()
+        response = service.users().messages().list(userId="me", labelIds=[specific_label.get("id")],
+                                                   maxResults=1000).execute()
 
-        print("Nr. of 429 Errors: ", sum([1 for response in invalid_addresses if "error" in response]))
+        mails_from_invalid_addresses = response["messages"]
 
-        messages = get_messages_from_invalid_addresses(invalid_addresses["messages"], creds)
+        while "nextPageToken" in response:
+            response = service.users().messages().list(userId="me", labelIds=[specific_label.get("id")],
+                                                       maxResults=1000,
+                                                       pageToken=response["nextPageToken"]).execute()
+
+            for message in response["messages"]:
+                mails_from_invalid_addresses.append(message)
+
+        print("Nr. of 429 Errors: ",
+              sum([1 for response in mails_from_invalid_addresses if "error" in mails_from_invalid_addresses]))
+
+        messages = get_messages_from_invalid_addresses(mails_from_invalid_addresses, creds)
 
         addresses_to_be_deleted = match_addresses_that_can_be_deleted(messages)
 

@@ -1,8 +1,12 @@
+import time
+
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
-from src.authentication import authenticate_to_api
 
-CONTACT_SCOPES = ["https://www.googleapis.com/auth/contacts.readonly"]
+from src.authentication import authenticate_to_api
+from src.batch import create_batch_request
+
+CONTACT_SCOPES = ["https://www.googleapis.com/auth/contacts"]
 
 
 def search_contact(service, search_term):
@@ -34,13 +38,36 @@ def delete_contacts(search_terms: list):
         # warm up cache
         search_contact(service, "")
 
-        contact_names_to_be_deleted = []
+        response = []
 
-        # find names of contacts with email addresses
-        for search_term in search_terms:
-            contact_names_to_be_deleted.append(search_contact(service, search_term))
+        nr_of_search_terms_per_batch = 10
+        for count in range(0, len(search_terms), nr_of_search_terms_per_batch):
 
-        batch_delete(service, contact_names_to_be_deleted)
+            batch_of_search_terms = search_terms[count:count + nr_of_search_terms_per_batch]
+            batch = create_batch_request("people", response)
+
+            # find names of contacts with email addresses
+            for search_term in batch_of_search_terms:
+                batch.add(service.people().searchContacts(query=search_term, readMask="names,emailAddresses"))
+
+            batch.execute()
+
+            # needed to match quota limit
+            time.sleep(10)
+
+        resource_names_of_contacts_to_be_deleted = [el["response"]["results"][0]["person"]["resourceName"] for el in response if el["response"] != {}]
+
+        for count in range(0, len(resource_names_of_contacts_to_be_deleted), nr_of_search_terms_per_batch):
+
+            resource_name_batch = resource_names_of_contacts_to_be_deleted[count:count + nr_of_search_terms_per_batch]
+            batch = create_batch_request("people", [])
+
+            for resource_name in resource_name_batch:
+                batch.add(service.people().deleteContact(resourceName=resource_name))
+
+            batch.execute()
+
+            time.sleep(10)
 
         """# Call the People API
         print("List 10 connection names")
