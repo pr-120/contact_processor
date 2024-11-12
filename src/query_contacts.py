@@ -151,12 +151,10 @@ def add_canton_info_to_contact(list_of_contacts: list[str]) -> dict:
             batch.add(service.people().get(resourceName=resource_name, personFields="names"))
 
         batch.execute()
-        time.sleep(5)
+        time.sleep(10)
 
     # {name_of_canton : {names of municipalities in canton, resourceNames of these municipalities}}
     cantons = {
-        "zurich": {"municipalities": [], "contacts": []},
-        "st_gallen": {"municipalities": [], "contacts": []},
         "thurgau": {"municipalities": [], "contacts": []}
     }
 
@@ -167,10 +165,11 @@ def add_canton_info_to_contact(list_of_contacts: list[str]) -> dict:
 
     # add municipality to the canton it is in
     for municipality in results:
+        name_of_municipality = municipality["response"]["names"][0]["displayName"]
         for key in cantons:
-            name_of_municipality = municipality["response"]["names"][0]["displayName"]
             if name_of_municipality in cantons[key]["municipalities"]:
                 cantons[key]["contacts"].append(municipality["response"]["resourceName"])
+                break
 
     return cantons
 
@@ -200,10 +199,12 @@ def modify_contact_groups(canton_data: dict):
         specified_group = canton_to_group_dict[canton_name]
 
         # add contacts to canton contact groups
-        result = (service.contactGroups().members().modify(
+        (service.contactGroups().members().modify(
             resourceName=specified_group["resourceName"],
             body={
                 "resourceNamesToAdd": canton_data[canton_name]["contacts"]
             }).execute())
+
+        time.sleep(3)
 
     return
