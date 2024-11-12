@@ -4,11 +4,8 @@ from audioop import error
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
-from src.authentication import authenticate_to_api
-from src.batch import create_batch_request
-from src.query_contacts import CONTACT_SCOPES
-
-MAIL_SCOPES = ["https://www.googleapis.com/auth/gmail.readonly"]
+from contact_processor.src.batch import create_batch_request
+from contact_processor.src.session_storage import get_credentials
 
 
 def match_addresses_that_can_be_deleted(messages):
@@ -64,7 +61,7 @@ def get_invalid_mail_addresses():
     :return invalid_mails: List of invalid mail addresses in string format
     """
 
-    creds = authenticate_to_api(MAIL_SCOPES + CONTACT_SCOPES)
+    creds = get_credentials()
     addresses_to_be_deleted = []
 
     try:

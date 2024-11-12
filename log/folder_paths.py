@@ -9,3 +9,5 @@ src_folder = root_folder + ' /src'
 credentials_folder = root_folder + '/credentials'
 
 tests_folder = root_folder + '/tests'
+
+data_folder = root_folder + "/data"

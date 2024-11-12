@@ -5,7 +5,7 @@ from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 
-from log.folder_paths import credentials_folder, root_folder
+from contact_processor.log.folder_paths import credentials_folder, root_folder
 
 
 def authenticate_to_api(scope: list[str]):
